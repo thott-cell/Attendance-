@@ -18,6 +18,7 @@ import {
   hasStudentAttended,
   addAttendanceRecord,
   getRecordsForSession,
+  endSession,
 } from '../services/firestore';
 import { detectFace, compareDescriptors, loadFaceModels, MATCH_THRESHOLD } from '../services/faceApi';
 import type { AttendanceSession, Student, AttendanceRecord } from '../types';
@@ -52,6 +53,29 @@ export default function LiveAttendancePage() {
     });
     return () => unsub();
   }, [toast]);
+
+  useEffect(() => {
+  if (!session?.active) return;
+
+  const timer = setInterval(async () => {
+    const status = isWithinSessionWindow(
+      session.date,
+      session.startTime,
+      session.endTime
+    );
+
+    if (status === 'after') {
+      try {
+        await endSession(session.id);
+        toast('Attendance session ended automatically.', 'info');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  }, 30000); // Check every 30 seconds
+
+  return () => clearInterval(timer);
+}, [session, toast]);
 
   async function handleFrame(_blob: Blob, dataUrl: string) {
     if (scanningRef.current) return;
