@@ -54,14 +54,29 @@ export function isWithinSessionWindow(
   startTime: string,
   endTime: string
 ): 'before' | 'open' | 'after' {
+
   const now = Date.now();
+
   const start = sessionTimestamp(date, startTime);
   const end = sessionTimestamp(date, endTime);
 
+  console.log({
+    date,
+    startTime,
+    endTime,
+    start,
+    end,
+    now,
+    startDate: new Date(start),
+    endDate: new Date(end),
+    nowDate: new Date(now)
+  });
+
   if (now < start) return 'before';
   if (now > end) return 'after';
+
   return 'open';
-}
+       }
 
 /**
  * Converts Firestore Timestamp, Date, string or number into milliseconds.
