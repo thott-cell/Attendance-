@@ -27,8 +27,8 @@ export const firebaseConfig = {
  * Settings → Upload → Upload presets.
  */
 export const cloudinaryConfig = {
-  cloudName: 'YOUR_CLOUDINARY_CLOUD_NAME',
-  uploadPreset: 'YOUR_UNSIGNED_UPLOAD_PRESET',
+  cloudName: 'dbj6koi4f',
+  uploadPreset: 'JobConnect-upload',
 };
 
 /**
