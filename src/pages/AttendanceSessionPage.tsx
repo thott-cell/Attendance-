@@ -23,7 +23,7 @@ import {
   watchActiveSession,
 } from '../services/firestore';
 import type { AttendanceSession } from '../types';
-import { formatDate, isWithinSessionWindow } from '../utils/helpers';
+import { formatDate, isWithinSessionWindow, toMillis } from '../utils/helpers';
 
 interface FormState {
   courseCode: string;
@@ -60,8 +60,17 @@ export default function AttendanceSessionPage() {
   }, []);
 
   async function refresh() {
-    const s = await getSessions();
-    setSessions(s.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '')));
+    try {
+      const s = await getSessions();
+      // createdAt may be a Firestore Timestamp, a JS Date, an ISO string,
+      // a number, or missing. Normalize to ms before sorting — never call
+      // localeCompare() on createdAt.
+      setSessions(
+        s.sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
+      );
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Failed to load sessions', 'error');
+    }
   }
 
   const set = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }));
@@ -301,3 +310,5 @@ export default function AttendanceSessionPage() {
     </div>
   );
 }
+                
+              
