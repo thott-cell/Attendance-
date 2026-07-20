@@ -1,12 +1,18 @@
 // Small shared helpers.
 
+import { Timestamp } from 'firebase/firestore';
+
 export function classNames(...c: (string | false | null | undefined)[]) {
   return c.filter(Boolean).join(' ');
 }
 
-export function formatDate(iso: string): string {
+export function formatDate(value: any): string {
   try {
-    return new Date(iso).toLocaleString(undefined, {
+    const date =
+      value?.toDate?.() ??
+      (value instanceof Date ? value : new Date(value));
+
+    return date.toLocaleString(undefined, {
       year: 'numeric',
       month: 'short',
       day: '2-digit',
@@ -14,18 +20,22 @@ export function formatDate(iso: string): string {
       minute: '2-digit',
     });
   } catch {
-    return iso;
+    return String(value ?? '');
   }
 }
 
-export function formatTime(iso: string): string {
+export function formatTime(value: any): string {
   try {
-    return new Date(iso).toLocaleTimeString(undefined, {
+    const date =
+      value?.toDate?.() ??
+      (value instanceof Date ? value : new Date(value));
+
+    return date.toLocaleTimeString(undefined, {
       hour: '2-digit',
       minute: '2-digit',
     });
   } catch {
-    return iso;
+    return String(value ?? '');
   }
 }
 
@@ -47,7 +57,38 @@ export function isWithinSessionWindow(
   const now = Date.now();
   const start = sessionTimestamp(date, startTime);
   const end = sessionTimestamp(date, endTime);
+
   if (now < start) return 'before';
   if (now > end) return 'after';
   return 'open';
+}
+
+/**
+ * Converts Firestore Timestamp, Date, string or number into milliseconds.
+ */
+export function toMillis(value: any): number {
+  if (!value) return 0;
+
+  if (value instanceof Timestamp) {
+    return value.toMillis();
   }
+
+  if (value && typeof value.toMillis === 'function') {
+    return value.toMillis();
+  }
+
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  return 0;
+}
