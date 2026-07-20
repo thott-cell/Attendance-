@@ -270,13 +270,14 @@ export default function AttendanceSessionPage() {
                     <div className="mt-4">
                       {!s.active ? (
                         <Button
-  size="sm"
-  className="w-full"
-  onClick={() => handleStart(s)}
-  icon={<PlayCircle className="h-4 w-4" />}
->
-  Start Attendance
-</Button>
+                          size="sm"
+                          className="w-full"
+                          onClick={() => handleStart(s)}
+                          icon={<PlayCircle className="h-4 w-4" />}
+                          disabled={window === 'after'}
+                        >
+                          Start Attendance
+                        </Button>
                       ) : (
                         <Button
                           size="sm"
@@ -309,5 +310,3 @@ export default function AttendanceSessionPage() {
     </div>
   );
 }
-                
-              
