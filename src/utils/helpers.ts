@@ -50,4 +50,4 @@ export function isWithinSessionWindow(
   if (now < start) return 'before';
   if (now > end) return 'after';
   return 'open';
-}
+  }
