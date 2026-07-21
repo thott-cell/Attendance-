@@ -223,12 +223,7 @@ export default function SignupPage() {
               </Link>
             </p>
 
-            <div className="mt-6 flex items-center gap-2 rounded-xl bg-brand-50 dark:bg-brand-500/10 p-3 text-xs text-brand-700 dark:text-brand-300">
-              <ShieldCheck className="h-4 w-4 shrink-0" />
-              <span>
-                Configure Firebase credentials in <code>src/config/firebase.ts</code> to enable authentication.
-              </span>
-            </div>
+            
           </div>
         </motion.div>
       </div>
