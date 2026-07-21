@@ -18,7 +18,6 @@ import {
   hasStudentAttended,
   addAttendanceRecord,
   getRecordsForSession,
-  endSession,
 } from '../services/firestore';
 import { detectFace, compareDescriptors, loadFaceModels, MATCH_THRESHOLD } from '../services/faceApi';
 import type { AttendanceSession, Student, AttendanceRecord } from '../types';
@@ -54,29 +53,6 @@ export default function LiveAttendancePage() {
     return () => unsub();
   }, [toast]);
 
-  useEffect(() => {
-  if (!session?.active) return;
-
-  const timer = setInterval(async () => {
-    const status = isWithinSessionWindow(
-      session.date,
-      session.startTime,
-      session.endTime
-    );
-
-    if (status === 'after') {
-      try {
-        await endSession(session.id);
-        toast('Attendance session ended automatically.', 'info');
-      } catch (err) {
-        console.error(err);
-      }
-    }
-  }, 30000); // Check every 30 seconds
-
-  return () => clearInterval(timer);
-}, [session, toast]);
-
   async function handleFrame(_blob: Blob, dataUrl: string) {
     if (scanningRef.current) return;
     const s = sessionRef.current;
@@ -100,17 +76,21 @@ export default function LiveAttendancePage() {
         const dist = compareDescriptors(det.descriptor, st.descriptor);
         if (!best || dist < best.dist) best = { student: st, dist };
       }
-      if (!best || best.dist > MATCH_THRESHOLD) return;
+      if (!best || best.dist > MATCH_THRESHOLD) {
+        toast('Student not recognized.', 'info');
+        return;
+      }
 
       const matched = best.student;
       if (recentIds.includes(matched.id)) return; // local dedupe
       if (await hasStudentAttended(s.id, matched.id)) {
         setRecentIds((r) => [...r, matched.id]);
+        toast('Attendance already recorded for this session.', 'info');
         return;
       }
 
       const now = new Date().toISOString();
-      await addAttendanceRecord({
+      const recordId = await addAttendanceRecord({
         studentId: matched.id,
         sessionId: s.id,
         courseCode: s.courseCode,
@@ -124,26 +104,33 @@ export default function LiveAttendancePage() {
         status: 'Present',
       });
 
-      setRecentIds((r) => [...r, matched.id]);
-      setRecords((r) => [
-        {
-          id: Math.random().toString(36).slice(2),
-          studentId: matched.id,
-          sessionId: s.id,
-          courseCode: s.courseCode,
-          courseTitle: s.courseTitle,
-          studentName: matched.fullName,
-          matricNumber: matched.matricNumber,
-          department: matched.department,
-          level: matched.level,
-          imageUrl: matched.imageUrl,
-          checkInTime: now,
-          status: 'Present',
-        },
-        ...r,
-      ]);
+      if (!recordId) {
+        // Server-side dedupe prevented a duplicate.
+        setRecentIds((r) => [...r, matched.id]);
+        toast('Attendance already recorded for this session.', 'info');
+        return;
+      }
+
+     setRecords((r) => [
+  {
+    id: Math.random().toString(36).slice(2),
+    studentId: matched.id,
+    sessionId: s.id,
+    lecturerId: s.lecturerId, // <-- add this
+    courseCode: s.courseCode,
+    courseTitle: s.courseTitle,
+    studentName: matched.fullName,
+    matricNumber: matched.matricNumber,
+    department: matched.department,
+    level: matched.level,
+    imageUrl: matched.imageUrl,
+    checkInTime: now,
+    status: 'Present',
+  },
+  ...r,
+]);
       setLastMatch({ student: matched, at: now });
-      toast(`${matched.fullName} checked in.`, 'success');
+      toast('Attendance recorded successfully.', 'success');
       setTimeout(() => setLastMatch(null), 5000);
     } finally {
       scanningRef.current = false;

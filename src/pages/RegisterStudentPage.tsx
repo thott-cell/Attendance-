@@ -6,9 +6,9 @@ import Button from '../components/ui/Button';
 import Webcam from '../components/ui/Webcam';
 import { Input, Select } from '../components/ui/Input';
 import { useToast } from '../contexts/ToastContext';
-import { addStudent } from '../services/firestore';
+import { addStudent, isMatricNumberTaken, isEmailTaken, findMatchingStudent } from '../services/firestore';
 import { uploadToCloudinary } from '../services/cloudinary';
-import { detectFace, loadFaceModels } from '../services/faceApi';
+import { loadFaceModels, validateFaceForRegistration } from '../services/faceApi';
 import { FACULTIES, LEVELS } from '../types';
 import { todayISO } from '../utils/helpers';
 
@@ -55,18 +55,17 @@ export default function RegisterStudentPage() {
     setCapturedBlob(blob);
     setCapturedUrl(dataUrl);
     setDescriptor(null);
-    // Compute descriptor from the captured frame.
     setDetecting(true);
     try {
       const img = await loadImage(dataUrl);
-      const result = await detectFace(img);
-      if (!result) {
-        toast('No face detected in the photo. Please retake.', 'warning');
+      const result = await validateFaceForRegistration(img);
+      if (!result.ok) {
+        toast(result.reason ?? 'Face validation failed.', 'warning');
         setDescriptor(null);
-      } else {
-        setDescriptor(result.descriptor);
-        toast('Face captured successfully.', 'success');
+        return;
       }
+      setDescriptor(result.descriptor ?? null);
+      toast('Face captured successfully.', 'success');
     } catch {
       toast('Face detection failed. Check that model weights are in /public/models.', 'error');
     } finally {
@@ -98,6 +97,23 @@ export default function RegisterStudentPage() {
 
     setProcessing(true);
     try {
+      // 1. Duplicate matric number check
+      if (await isMatricNumberTaken(form.matricNumber)) {
+        toast('This matric number is already registered.', 'error');
+        return;
+      }
+      // 2. Duplicate email check
+      if (form.email && await isEmailTaken(form.email)) {
+        toast('This email has already been registered.', 'error');
+        return;
+      }
+      // 3. Duplicate face check
+      const faceMatch = await findMatchingStudent(Array.from(descriptor));
+      if (faceMatch) {
+        toast('This face has already been registered by another student.', 'error');
+        return;
+      }
+
       const imageUrl = await uploadToCloudinary(capturedBlob);
       await addStudent({
         ...form,

@@ -14,6 +14,7 @@ import {
 import { getAuth } from 'firebase/auth';
 import { app, db } from './firebase';
 import type { AttendanceRecord, AttendanceSession, Student } from '../types';
+import { compareDescriptors, MATCH_THRESHOLD } from './faceApi';
 
 /* ---------------- Lecturer auth helper ---------------- */
 
@@ -28,6 +29,52 @@ function requireUid(): string | null {
 }
 
 /* ---------------- Students ---------------- */
+
+/** Check whether a matric number already exists for this lecturer. */
+export async function isMatricNumberTaken(matricNumber: string): Promise<boolean> {
+  const uid = requireUid();
+  if (!uid) return false;
+  const snap = await getDocs(
+    query(
+      collection(db, 'students'),
+      where('lecturerId', '==', uid),
+      where('matricNumber', '==', matricNumber.trim())
+    )
+  );
+  return !snap.empty;
+}
+
+/** Check whether an email already exists for this lecturer. */
+export async function isEmailTaken(email: string): Promise<boolean> {
+  const uid = requireUid();
+  if (!uid) return false;
+  const snap = await getDocs(
+    query(
+      collection(db, 'students'),
+      where('lecturerId', '==', uid),
+      where('email', '==', email.trim().toLowerCase())
+    )
+  );
+  return !snap.empty;
+}
+
+/**
+ * Check whether a face descriptor already matches an existing student above the
+ * recognition threshold. Returns the matching student, if any.
+ */
+export async function findMatchingStudent(
+  descriptor: number[] | Float32Array
+): Promise<Student | null> {
+  const students = await getStudents();
+  let best: { student: Student; dist: number } | null = null;
+  for (const st of students) {
+    if (!st.descriptor || st.descriptor.length === 0) continue;
+    const dist = compareDescriptors(descriptor, st.descriptor);
+    if (!best || dist < best.dist) best = { student: st, dist };
+  }
+  if (best && best.dist <= MATCH_THRESHOLD) return best.student;
+  return null;
+}
 
 export async function addStudent(data: Omit<Student, 'id' | 'dateRegistered' | 'lecturerId'>) {
   const uid = requireUid();
@@ -157,9 +204,14 @@ export function watchActiveSession(cb: (s: AttendanceSession | null) => void): U
 
 export async function addAttendanceRecord(
   data: Omit<AttendanceRecord, 'id' | 'lecturerId'>
-) {
+): Promise<string | null> {
   const uid = requireUid();
   if (!uid) throw new Error('Not authenticated');
+  // Server-side dedupe: refuse to create a duplicate record for the same
+  // student in the same session.
+  if (await hasStudentAttended(data.sessionId, data.studentId)) {
+    return null;
+  }
   const ref = await addDoc(collection(db, 'attendanceRecords'), {
     ...data,
     lecturerId: uid,
