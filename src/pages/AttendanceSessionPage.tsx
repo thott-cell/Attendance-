@@ -7,7 +7,6 @@ import {
   StopCircle,
   Clock,
   MapPin,
-  User,
   BookOpen,
 } from 'lucide-react';
 import Card from '../components/ui/Card';
@@ -15,6 +14,7 @@ import Button from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import ConfirmModal from '../components/ui/ConfirmModal';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import {
   createSession,
   getSessions,
@@ -28,7 +28,6 @@ import { formatDate, isWithinSessionWindow, toMillis } from '../utils/helpers';
 interface FormState {
   courseCode: string;
   courseTitle: string;
-  lecturerName: string;
   venue: string;
   date: string;
   startTime: string;
@@ -38,7 +37,6 @@ interface FormState {
 const initialForm: FormState = {
   courseCode: '',
   courseTitle: '',
-  lecturerName: '',
   venue: '',
   date: new Date().toISOString().slice(0, 10),
   startTime: '08:00',
@@ -47,6 +45,7 @@ const initialForm: FormState = {
 
 export default function AttendanceSessionPage() {
   const { toast } = useToast();
+  const { profile } = useAuth();
   const [form, setForm] = useState<FormState>(initialForm);
   const [sessions, setSessions] = useState<AttendanceSession[]>([]);
   const [activeSession, setActiveSession] = useState<AttendanceSession | null>(null);
@@ -88,7 +87,10 @@ export default function AttendanceSessionPage() {
     }
     setCreating(true);
     try {
-      await createSession(form);
+      await createSession({
+        ...form,
+        lecturerName: profile?.fullName ?? '',
+      });
       toast('Attendance session created.', 'success');
       setForm({ ...initialForm, date: form.date });
       await refresh();
@@ -154,12 +156,6 @@ export default function AttendanceSessionPage() {
                 onChange={(e) => set('courseTitle', e.target.value)}
               />
             </div>
-            <Input
-              label="Lecturer Name *"
-              placeholder="Dr. Jane Doe"
-              value={form.lecturerName}
-              onChange={(e) => set('lecturerName', e.target.value)}
-            />
             <Input
               label="Venue *"
               placeholder="LT 200"
@@ -262,7 +258,6 @@ export default function AttendanceSessionPage() {
                       </span>
                     </div>
                     <div className="mt-3 space-y-1.5 text-xs text-ink-500 dark:text-ink-300">
-                      <p className="flex items-center gap-2"><User className="h-3.5 w-3.5" /> {s.lecturerName}</p>
                       <p className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /> {s.venue}</p>
                       <p className="flex items-center gap-2"><Clock className="h-3.5 w-3.5" /> {s.date} · {s.startTime}–{s.endTime}</p>
                       <p className="flex items-center gap-2"><BookOpen className="h-3.5 w-3.5" /> Created {formatDate(s.createdAt ?? s.date)}</p>

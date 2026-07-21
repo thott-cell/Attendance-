@@ -3,6 +3,8 @@ import {
   getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
   updatePassword,
   type User,
@@ -16,6 +18,14 @@ interface AuthContextValue {
   profile: LecturerProfile | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  signup: (data: {
+    fullName: string;
+    email: string;
+    password: string;
+    department?: string;
+    faculty?: string;
+  }) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   changePassword: (newPassword: string) => Promise<void>;
   updateProfile: (data: Partial<LecturerProfile>) => Promise<void>;
@@ -99,6 +109,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
+  const signup = async (data: {
+    fullName: string;
+    email: string;
+    password: string;
+    department?: string;
+    faculty?: string;
+  }) => {
+    const auth = getAuth(app);
+    const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
+    const newProfile: LecturerProfile = {
+      uid: cred.user.uid,
+      email: data.email,
+      fullName: data.fullName,
+      department: data.department ?? '',
+      faculty: data.faculty ?? '',
+    };
+    await setDoc(doc(db, 'lecturers', cred.user.uid), newProfile);
+    setProfile(newProfile);
+  };
+
+  const resetPassword = async (email: string) => {
+    const auth = getAuth(app);
+    await sendPasswordResetEmail(auth, email);
+  };
+
   const logout = async () => {
     await signOut(getAuth(app));
   };
@@ -117,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, profile, loading, login, logout, changePassword, updateProfile }}
+      value={{ user, profile, loading, login, signup, resetPassword, logout, changePassword, updateProfile }}
     >
       {children}
     </AuthContext.Provider>

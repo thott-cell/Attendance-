@@ -12,6 +12,8 @@ import PageLoader from './components/PageLoader';
 // renders fast on mobile. Heavy libs (face-api.js, recharts, xlsx, jspdf)
 // only load when their page is visited.
 const LoginPage = lazy(() => import('./pages/LoginPage'));
+const SignupPage = lazy(() => import('./pages/SignupPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const RegisterStudentPage = lazy(() => import('./pages/RegisterStudentPage'));
 const AttendanceSessionPage = lazy(() => import('./pages/AttendanceSessionPage'));
@@ -30,6 +32,8 @@ export default function App() {
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />
+                  <Route path="/signup" element={<SignupPage />} />
+                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                   <Route
                     element={
                       <ProtectedRoute>

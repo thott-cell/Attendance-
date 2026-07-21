@@ -1,4 +1,40 @@
 // Small shared helpers.
+import { Timestamp } from 'firebase/firestore';
+
+/**
+ * Converts Firestore Timestamp, Date, string or number into milliseconds.
+ */
+export function toMillis(value: any): number {
+  if (!value) return 0;
+
+  // Firestore Timestamp
+  if (value instanceof Timestamp) {
+    return value.toMillis();
+  }
+
+  // Timestamp-like object
+  if (typeof value?.toMillis === 'function') {
+    return value.toMillis();
+  }
+
+  // JavaScript Date
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+
+  // Unix timestamp
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  // ISO date string
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  return 0;
+}
 
 import { Timestamp } from 'firebase/firestore';
 

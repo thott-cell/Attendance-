@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Fingerprint, Mail, Lock, Eye, EyeOff, ShieldCheck, ScanFace, CalendarClock, BarChart3 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -155,9 +155,9 @@ export default function LoginPage() {
                   <input type="checkbox" className="rounded border-ink-300 text-brand-600 focus:ring-brand-500" />
                   Remember me
                 </label>
-                <a href="#" className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">
+                <Link to="/forgot-password" className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">
                   Forgot password?
-                </a>
+                </Link>
               </div>
 
               <Button type="submit" loading={submitting} className="w-full" size="lg">
@@ -171,6 +171,13 @@ export default function LoginPage() {
                 Configure Firebase credentials in <code>src/config/firebase.ts</code> to enable authentication.
               </span>
             </div>
+
+            <p className="mt-6 text-center text-sm text-ink-500 dark:text-ink-300">
+              Don't have an account?{' '}
+              <Link to="/signup" className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">
+                Sign up
+              </Link>
+            </p>
           </div>
         </motion.div>
       </div>

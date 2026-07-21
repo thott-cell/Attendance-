@@ -2,6 +2,7 @@
 
 export interface Student {
   id: string;
+  lecturerId: string;
   fullName: string;
   matricNumber: string;
   department: string;
@@ -17,9 +18,11 @@ export interface Student {
 
 export interface AttendanceSession {
   id: string;
+  lecturerId: string;
+  lecturerEmail: string;
+  lecturerName: string;
   courseCode: string;
   courseTitle: string;
-  lecturerName: string;
   venue: string;
   date: string; // YYYY-MM-DD
   startTime: string; // HH:mm
@@ -30,8 +33,9 @@ export interface AttendanceSession {
 
 export interface AttendanceRecord {
   id: string;
-  studentId: string;
+  lecturerId: string;
   sessionId: string;
+  studentId: string;
   courseCode: string;
   courseTitle: string;
   studentName: string;

@@ -16,23 +16,26 @@ import { StatCardSkeleton } from '../components/ui/Skeleton';
 import {
   getStudents,
   getAttendanceRecords,
+  getSessions,
   watchActiveSession,
 } from '../services/firestore';
 import type { AttendanceSession, AttendanceRecord, Student } from '../types';
-import { formatDate, todayISO } from '../utils/helpers';
+import { formatDate, todayISO, toMillis } from '../utils/helpers';
 
 export default function DashboardPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [sessions, setSessions] = useState<AttendanceSession[]>([]);
   const [activeSession, setActiveSession] = useState<AttendanceSession | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let unsub: (() => void) | undefined;
     (async () => {
-      const [s, r] = await Promise.all([getStudents(), getAttendanceRecords()]);
+      const [s, r, sess] = await Promise.all([getStudents(), getAttendanceRecords(), getSessions()]);
       setStudents(s);
       setRecords(r);
+      setSessions(sess.sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)));
       unsub = watchActiveSession(setActiveSession);
       setLoading(false);
     })();
@@ -222,46 +225,94 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Recent check-ins */}
-      <Card delay={0.3}>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-ink-700 dark:text-ink-100">
-            Recent check-ins
-          </p>
-          <Link
-            to="/records"
-            className="text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
-          >
-            All records →
-          </Link>
-        </div>
-        <div className="mt-4 space-y-2">
-          {records.slice(-5).reverse().map((r) => (
-            <div
-              key={r.id}
-              className="flex items-center gap-3 rounded-xl bg-ink-50/60 dark:bg-ink-700/30 p-3"
+      {/* Recent sessions & check-ins */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card delay={0.3}>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-ink-700 dark:text-ink-100">
+              Recent sessions
+            </p>
+            <Link
+              to="/sessions"
+              className="text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
             >
-              <img
-                src={r.imageUrl}
-                alt={r.studentName}
-                className="h-9 w-9 rounded-full object-cover"
-              />
-              <div className="flex-1 min-w-0">
-                <p className="truncate text-sm font-medium text-ink-700 dark:text-ink-100">
-                  {r.studentName}
-                </p>
-                <p className="truncate text-xs text-ink-400">
-                  {r.matricNumber} · {r.courseCode}
-                </p>
+              All sessions →
+            </Link>
+          </div>
+          <div className="mt-4 space-y-2">
+            {sessions.slice(0, 5).map((s) => (
+              <div
+                key={s.id}
+                className="flex items-center gap-3 rounded-xl bg-ink-50/60 dark:bg-ink-700/30 p-3"
+              >
+                <div className="grid h-9 w-9 place-items-center rounded-lg bg-brand-50 dark:bg-brand-500/15 text-brand-600 dark:text-brand-300 shrink-0">
+                  <CalendarClock className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-sm font-medium text-ink-700 dark:text-ink-100">
+                    {s.courseCode}
+                  </p>
+                  <p className="truncate text-xs text-ink-400">
+                    {s.date} · {s.startTime}–{s.endTime}
+                  </p>
+                </div>
+                <span
+                  className={
+                    s.active
+                      ? 'rounded-full bg-emerald-100 dark:bg-emerald-500/20 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-300'
+                      : 'rounded-full bg-ink-100 dark:bg-ink-700/60 px-2 py-0.5 text-[11px] font-medium text-ink-500'
+                  }
+                >
+                  {s.active ? 'Live' : 'Closed'}
+                </span>
               </div>
-              <span className="text-xs text-ink-400">{formatDate(r.checkInTime)}</span>
-            </div>
-          ))}
-          {records.length === 0 && (
-            <p className="py-6 text-center text-sm text-ink-400">No check-ins yet.</p>
-          )}
-        </div>
-      </Card>
+            ))}
+            {sessions.length === 0 && (
+              <p className="py-6 text-center text-sm text-ink-400">No sessions yet.</p>
+            )}
+          </div>
+        </Card>
+
+        <Card delay={0.35}>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-ink-700 dark:text-ink-100">
+              Recent check-ins
+            </p>
+            <Link
+              to="/records"
+              className="text-xs font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
+            >
+              All records →
+            </Link>
+          </div>
+          <div className="mt-4 space-y-2">
+            {records.slice(-5).reverse().map((r) => (
+              <div
+                key={r.id}
+                className="flex items-center gap-3 rounded-xl bg-ink-50/60 dark:bg-ink-700/30 p-3"
+              >
+                <img
+                  src={r.imageUrl}
+                  alt={r.studentName}
+                  className="h-9 w-9 rounded-full object-cover"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-sm font-medium text-ink-700 dark:text-ink-100">
+                    {r.studentName}
+                  </p>
+                  <p className="truncate text-xs text-ink-400">
+                    {r.matricNumber} · {r.courseCode}
+                  </p>
+                </div>
+                <span className="text-xs text-ink-400">{formatDate(r.checkInTime)}</span>
+              </div>
+            ))}
+            {records.length === 0 && (
+              <p className="py-6 text-center text-sm text-ink-400">No check-ins yet.</p>
+            )}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
